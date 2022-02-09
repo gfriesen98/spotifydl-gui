@@ -1,0 +1,9 @@
+node_modules
+dist/
+*.log
+.vscode
+binaries
+dl
+.env
+deploy/linux/build
+deploy/win32/build
