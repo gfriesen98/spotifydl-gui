@@ -7,3 +7,4 @@ dl
 .env
 deploy/linux/build
 deploy/win32/build
+temp

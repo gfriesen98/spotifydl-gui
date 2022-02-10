@@ -6,7 +6,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "webpack --mode production",
+    "build": "webpack --mode production && nodegui-packer --pack dist/",
     "start": "webpack && qode ./dist/index.js",
     "debug": "webpack && qode --inspect ./dist/index.js"
   },
@@ -15,15 +15,12 @@
     "axios": "^0.25.0",
     "dotenv": "^16.0.0",
     "extract-zip": "^2.0.1",
-    "lodash": "^4.17.21",
-    "node-fecth": "^0.0.1-security",
     "scrape-youtube": "^2.1.14",
     "spotify-url-info": "^2.2.5",
-    "supports-color": "^9.2.1",
-    "unzipper": "^0.10.11"
+    "supports-color": "^9.2.1"
   },
   "devDependencies": {
-    "@nodegui/packer": "^1.4.1",
+    "@nodegui/packer": "^1.5.0",
     "@types/node": "^16.4.13",
     "clean-webpack-plugin": "^3.0.0",
     "file-loader": "^6.2.0",
