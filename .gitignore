@@ -8,3 +8,4 @@ dl
 deploy/linux/build
 deploy/win32/build
 temp
+assets/yt_dlp_version.json

@@ -12,11 +12,15 @@ const {
 const youtube = require('scrape-youtube');
 const { getPreview, getTracks, getData } = require('spotify-url-info');
 const { spawn } = require('child_process');
-const { access, rename, rm, writeFile, unlink, readFile } = require('fs/promises');
-const { mkdirSync, createWriteStream, readFileSync } = require('fs');
+const { access, rename, rm, writeFile, unlink } = require('fs/promises');
+const { mkdirSync, createWriteStream } = require('fs');
 const extract = require('extract-zip');
 const { default: axios } = require('axios');
 const path = require('path');
+
+const rootStyleSheet = require('./styles/rootStyleSheet');
+const yt_dlp_version = require('../assets/yt_dlp_version.json');
+
 const spotify_prefixes = ['https://open.spotify.com/track', 'https://play.spotify.com/track', 'https://open.spotify.com/playlist', 'https://open.spotify.com/album'];
 const ffmpeg_urls = {
     macos: [
@@ -26,11 +30,9 @@ const ffmpeg_urls = {
     windows: 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip',
     linux: 'https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz'
 }
-const rootStyleSheet = require('./styles/rootStyleSheet');
-const yt_dlp_version = require('./utility/yt_dlp_version.json');
 
-const yt_dlp_binary = getYtdlpBinaryName();
-const ffmpeg_binary = getFfmpegBinaryName();
+const yt_dlp_binary = require('./utility/binaryName').getYtdlpBinaryName();
+const ffmpeg_binary = require('./utility/binaryName').getFfmpegBinaryName();
 
 /**
  * Gets the correct binary name to download yt-dlp
@@ -61,7 +63,7 @@ function getFfmpegBinaryName() {
  * @param {QPlainTextEdit} output Output box
  * @returns {boolean}
  */
-async function check_deps_win(output) {
+async function check_deps(output) {
     let has_ytdlp = false;
     let current_ytdlp_version = yt_dlp_version.current;
     let has_path = false;
@@ -102,7 +104,7 @@ async function check_deps_win(output) {
         output.insertPlainText('[setup]: Needs yt-dlp\n');
     }
 
-    // check latest the yt-dlp version
+    // check for the latest yt-dlp version
     let latest_releases = null;
     let latest_ytdlp_version = "";
     try {
@@ -114,14 +116,14 @@ async function check_deps_win(output) {
         // yt_dlp_version.current should equal "" on fresh build so set it
         if (current_ytdlp_version === "") {
             yt_dlp_version.current = latest_ytdlp_version;
-            await writeFile(path.resolve('./utility/yt_dlp_version.json'), JSON.stringify(yt_dlp_version))
+            await writeFile('./assets/yt_dlp_version.json', JSON.stringify(yt_dlp_version))
         
         // yt_dlp_version.current should contain a string value after first launch
         } else if (latest_ytdlp_version !== current_ytdlp_version) {
             has_ytdlp = false;
             yt_dlp_version.current = latest_ytdlp_version;
             output.insertPlainText(`\t Update needed!!\n`);
-            await writeFile(path.resolve('./utility/yt_dlp_version.json'), JSON.stringify(yt_dlp_version));
+            await writeFile('./assets/yt_dlp_version.json', JSON.stringify(yt_dlp_version));
 
         // same ver
         } else { 
@@ -341,9 +343,9 @@ async function main() {
                 const data = await getPreview(input);
 
                 output.insertPlainText("[Youtube] Searching Youtube...\n");
-                output.insertPlainText(`[Youtube] Using "${data.artist} - ${data.title}" as search query\n`);
+                output.insertPlainText(`[Youtube] Using "${data.artist} topic - ${data.title}" as search query\n`);
 
-                const youtube_data = await youtube.search(`${data.artist} - ${data.title} Audio`);
+                const youtube_data = await youtube.search(`${data.artist} - ${data.title} official audio`);
                 if (youtube_data.videos.length === 0) throw new Error('No results found...');
                 console.log(youtube_data);
 
@@ -409,7 +411,7 @@ async function main() {
     win.show();
 
     // check for dependencies
-    check_deps_win(output);
+    check_deps(output);
     global.win = win;
 }
 
