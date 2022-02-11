@@ -1,7 +1,9 @@
 const { default: axios } = require('axios');
+const { spawn } = require('child_process');
 const { writeFile, access } = require('fs/promises');
+const {yt_dlp_binary} = require('./constants'); 
 const yt_dlp_version = require('../../assets/yt_dlp_version.json');
-const {yt_dlp_binary} = require('./binaryName');
+const path = require('path');
 
 async function getLatestYtdlpVersion(output) {
     try {
@@ -81,5 +83,39 @@ module.exports = {
             output.insertPlainText(`\t No update needed...\n`);
         }
         return { has_ytdlp, latest_ytdlp_version };
+    },
+
+    yt_dlp:{
+
+        /**
+         * Spawns a yt-dlp process to download and convert a youtube video to mp3
+         * @param {string} url youtube url
+         * @param {string} download_dir download directory
+         * @param {QPlainTextEdit} output
+         * @returns {Promise} Promise object resolves on exit
+         */
+        downloadMp3: function (url, download_dir, output) {
+            return new Promise(function(resolve, reject) {
+                const options = ["-v", '-P', download_dir, "--ignore-errors", "--format", "bestaudio", "--extract-audio", "--audio-format", "mp3", "--audio-quality", "160K", "--output", `%(title)s.%(ext)s"`, url];
+                const yt_dlp = spawn("./binaries/" + yt_dlp_binary, options);
+        
+                yt_dlp.stdout.on('data', data => {
+                    let text = data.toString().trim();
+                    if (text !== '' || text !== null) output.insertPlainText(text + "\n");
+                });
+        
+                yt_dlp.on('error', (e) => {
+                    console.error(e);
+                    reject(e);
+                });
+        
+                yt_dlp.on('exit', code => {
+                    console.log('exited with code ' + code);
+                    output.insertPlainText("\nFinished with exit code " + code + "\n");
+                    output.insertPlainText("Saved to "+path.resolve(download_dir)+"\n");
+                    resolve(code);
+                });
+            });
+        }
     }
 }

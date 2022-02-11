@@ -1,4 +1,4 @@
-const {ffmpeg_binary, ffmpeg_urls} = require('../utility/binaryName');
+const {ffmpeg_binary, ffmpeg_urls} = require('./constants');
 const { default: axios } = require('axios');
 const { access, rename, rm, writeFile, unlink } = require('fs/promises');
 const extract = require('extract-zip');

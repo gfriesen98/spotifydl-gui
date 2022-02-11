@@ -13,5 +13,20 @@ module.exports = {
         ],
         windows: 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip',
         linux: 'https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz'
+    },
+
+    youtube_queries: {
+        /**
+         * Generate query from a template
+         * @param {string} artist artist
+         * @param {string} track track
+         * @param {string} other optional other, probably album
+         * @returns {string} `${artist} - topic - ${track} - ${other}`
+         */
+        track: function(artist, track, other = "") {
+            // le official audio
+            other += " official audio";
+            return `${artist} topic - ${track} - ${other}`;
+        },
     }
 }
