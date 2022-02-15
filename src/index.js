@@ -9,7 +9,7 @@ const rootStyleSheet = require('./styles/rootStyleSheet');
 const spotify_prefixes = ['https://open.spotify.com/track', 'https://play.spotify.com/track', 'https://open.spotify.com/playlist', 'https://open.spotify.com/album'];
 const { checkYtdlpVersion, yt_dlp } = require('./utility/ytdlp');
 const { checkFfmpegExists, downloadWin32, downloadLinux, downloadMacos } = require('./utility/ffmpeg');
-const { singleTrackUrl, multiTrackUrl } = require('./utility/spotify');
+const { singleTrackUrl } = require('./utility/spotify');
 
 const {
     FlexLayout,
@@ -28,7 +28,6 @@ const {
 const { youtube } = require('scrape-youtube');
 const { getData, getTracks } = require('spotify-url-info');
 
-let isYoutubeUrl = false;
 let fileType = 'mp3';
 
 /**
