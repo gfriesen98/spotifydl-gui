@@ -2,15 +2,30 @@
 
 gui for yt-dlp that parses metadata from spotify urls
 
-written in nodejs with nodegui
-
-i dont have releases yet so you have to clone and build yourself
-
-its early in development, the code needs to be restructured
+its early in development and will probably break
 
 the program should download yt-dlp and ffmpeg on launch but its probably still somewhat broken
 
-# usage
+*written in nodejs with nodegui*
+
+# program usage
+
+
+download latest release [here](url) or in the releases section of this repo
+
+unzip and run `spotifydl-gui.exe`, your antivirus will probably complain because its unsigned :p
+
+how to use:
+1. wait for yt-flp and ffmpeg to download
+   - the ffmpeg download can be slow :/
+2. input a spotify url into the url box
+   - right now it only supports spotify urls that start with `'https://open.spotify.com/track', 'https://play.spotify.com/track', 'https://open.spotify.com/playlist', 'https://open.spotify.com/album'`
+   - playlists are limited to 100 tracks !!
+3. optionally add a download directory path
+4. click download
+   - defaults to `./downloads` in the exe directory
+
+# dev usage
 
 windows development requirements:
 

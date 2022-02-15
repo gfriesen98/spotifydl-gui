@@ -23,10 +23,9 @@ module.exports = {
          * @param {string} other optional other, probably album
          * @returns {string} `${artist} - topic - ${track} - ${other}`
          */
-        track: function(artist, track, other = "") {
+        track: function(artist, track, album = "") {
             // le official audio
-            other += " official audio";
-            return `${artist} topic - ${track} - ${other}`;
+            return `${artist} ${album} ${track}`;
         },
     }
 }
