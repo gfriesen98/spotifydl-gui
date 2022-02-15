@@ -29,13 +29,14 @@ const { youtube } = require('scrape-youtube');
 const { getData, getTracks } = require('spotify-url-info');
 
 let fileType = 'mp3';
+let canDownload = false;
 
 /**
  * Checks for ffmpeg and yt-dlp on startup
  * @param {QPlainTextEdit} output Output box
  * @returns {boolean}
  */
-async function check_deps(output) {
+async function check_deps(output, button) {
     output.insertPlainText('[setup]: Wait for "Ready!" before using!\n\n');
     output.insertPlainText('[setup]: Checking for dependencies...\n');
 
@@ -92,6 +93,7 @@ async function check_deps(output) {
         }
     }
     output.insertPlainText('Ready!');
+    button.setEnabled(true);
 }
 
 async function main() {
@@ -160,7 +162,7 @@ async function main() {
     filetypeCombobox.setObjectName('filetypeCombobox')
     filetypeCombobox.addItem(undefined, '-- filetype (default mp3) --');
     filetypeCombobox.addItem(undefined, 'mp3');
-    filetypeCombobox.addItem(undefined, 'flac');
+    filetypeCombobox.addItem(undefined, '"flac"');
     optionsRowLayout.addWidget(filetypeCombobox);
 
     const checkboxLayout = new QWidget();
@@ -193,6 +195,7 @@ async function main() {
     // Buttons
     const downloadButton = new QPushButton();
     downloadButton.setText('Download');
+    downloadButton.setEnabled(false);
     downloadButton.setObjectName('downloadButton');
 
     const directoryButton = new QPushButton();
@@ -236,7 +239,7 @@ async function main() {
     filetypeCombobox.addEventListener('currentIndexChanged', d => {
         if (d === 0) fileType = 'mp3';
         if (d === 1) fileType = 'mp3';
-        if (d === 2) fileType = '"flac"';
+        if (d === 2) fileType = 'flac';
     });
 
     // show file picker dialog
@@ -316,7 +319,7 @@ async function main() {
     win.show();
 
     // check for dependencies
-    check_deps(output);
+    check_deps(output, downloadButton);
     global.win = win;
 }
 
