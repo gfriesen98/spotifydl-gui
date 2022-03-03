@@ -94,12 +94,34 @@ module.exports = {
          * @param {string} download_dir download directory
          * @param {string} filename_template template to rename file. Defaults to '%(title)s.%(ext)s' (yt-dlp specific templating)
          * @param {QPlainTextEdit} output
-         * @param {Object} options yt-dlp options
+         * @param {Object} options yt-dlp options: album_name, file_type
          * @returns {Promise} Promise object resolves on exit
          */
-        downloadMp3: function (url, download_dir, filename_template = `%(title)s.%(ext)s`, output, options) {
+        downloadTrack: function (url, download_dir, filename_template = `%(title)s.%(ext)s`, output, options) {
             return new Promise(function(resolve, reject) {
-                const yt_dlp_options = ["-v", '-P', download_dir, "--ignore-errors", "--format", "bestaudio", "--add-metadata", "--extract-audio", "--embed-thumbnail", "--audio-format", options.fileType, "--audio-quality", "0", "--output", `${filename_template}`, url];
+                const yt_dlp_options = [
+                    // ignore errors
+                    "-v", "--ignore-errors",
+
+                    // set download dir
+                    "-P", download_dir,
+
+                    // set audio format
+                    "--format", "bestaudio",
+
+                    // metadata settings, replace the album field with the album name from spotify, sometimes it can be different [A-Za-z0-9]
+                    "--embed-metadata", "--replace-in-metadata", "album", ".+", `${options.album_name}`,
+
+                    // audio settings
+                    "--extract-audio", "--embed-thumbnail",
+                    "--audio-format", options.file_type,
+                    "--audio-quality", "0", // default bestquality
+
+                    // output settings & download url
+                    "--output", `${filename_template.replace('/', ' ').replace(/  +/g, ' ')}`,
+                    url
+                ];
+                console.log(yt_dlp_options);
                 const yt_dlp = spawn("./binaries/" + yt_dlp_binary, yt_dlp_options);
         
                 yt_dlp.stdout.on('data', data => {
@@ -121,6 +143,10 @@ module.exports = {
                     console.error(e);
                     reject(e);
                 });
+
+                yt_dlp.stderr.on('data', data => {
+                    console.error(data.toString());
+                })
         
                 yt_dlp.on('exit', code => {
                     console.log('exited with code ' + code);

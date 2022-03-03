@@ -28,7 +28,7 @@ const {
 const { youtube } = require('scrape-youtube');
 const { getData, getTracks } = require('spotify-url-info');
 
-let fileType = 'mp3';
+let file_type = 'mp3';
 let canDownload = false;
 
 /**
@@ -237,9 +237,9 @@ async function main() {
      * change file extension
      */
     filetypeCombobox.addEventListener('currentIndexChanged', d => {
-        if (d === 0) fileType = 'mp3';
-        if (d === 1) fileType = 'mp3';
-        if (d === 2) fileType = 'flac';
+        if (d === 0) file_type = 'mp3';
+        if (d === 1) file_type = 'mp3';
+        if (d === 2) file_type = 'flac';
     });
 
     // show file picker dialog
@@ -263,7 +263,7 @@ async function main() {
                 output.insertPlainText("[Spotify] Gathering info from Spotify...\n");
                 const youtube_result = await singleTrackUrl(input, output);
                 const dir = `${download_dir}/${youtube_result.artist}/${youtube_result.album_name}`;
-                await yt_dlp.downloadMp3(youtube_result.first_result.link, dir, `${youtube_result.track_number} - ${youtube_result.track}.%(ext)s`, output, { fileType });
+                await yt_dlp.downloadTrack(youtube_result.first_result.link, dir, `${youtube_result.track_number} - ${youtube_result.track}.%(ext)s`, output, { file_type });
 
             } else if (input.startsWith(spotify_prefixes[3])) {
                 output.insertPlainText("[Spotify] Gathering info from Spotify...\n");
@@ -274,12 +274,13 @@ async function main() {
                 for await (const n of data.tracks.items) {
                     const track = n.name;
                     // const yt_query = youtube_queries.track(artist, track, album_name);
-                    const yt_query = `${artist} topic ${track}`;
+                    // Tracks can sometimes be the same as the album name which nets us different results
+                    const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
                     const results = await youtube.search(yt_query);
                     let first_result = results.videos[0];
                     output.insertPlainText(`[Youtube] Found video for ${track}:\n`);
                     output.insertPlainText(`[Youtube] URL: ${first_result.link}\n`);
-                    await yt_dlp.downloadMp3(first_result.link, dir, `${n.track_number} - ${track}.%(ext)s`, output, { fileType });
+                    await yt_dlp.downloadTrack(first_result.link, dir, `${n.track_number} - ${track}.${file_type}`, output, { file_type, album_name });
                 }
                 output.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(dir)}\n`);
 
@@ -298,7 +299,7 @@ async function main() {
                     const results = await youtube.search(yt_query);
                     let first_result = results.videos[0];
                     output.insertPlainText(`[Youtube] Found video for ${track}:\n[Youtube] URL: ${first_result.link}\n`);
-                    await yt_dlp.downloadMp3(first_result.link, dir, `${n.track_number} - ${track}.%(ext)s`, output, { fileType });
+                    await yt_dlp.downloadTrack(first_result.link, dir, `${n.track_number} - ${track}.%(ext)s`, output, { file_type, album_name });
                     temp = dir;
                 }
                 output.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(temp)}\n`);
