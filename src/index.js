@@ -273,7 +273,8 @@ async function main() {
                 const dir = `${download_dir}/${artist}/${album_name}`;
                 for await (const n of data.tracks.items) {
                     const track = n.name;
-                    const yt_query = youtube_queries.track(artist, track, album_name);
+                    // const yt_query = youtube_queries.track(artist, track, album_name);
+                    const yt_query = `${artist} topic ${track}`;
                     const results = await youtube.search(yt_query);
                     let first_result = results.videos[0];
                     output.insertPlainText(`[Youtube] Found video for ${track}:\n`);
@@ -292,7 +293,8 @@ async function main() {
                     const album_name = n.album.name;
                     const track = n.name;
                     const dir = `${download_dir}/${artist}/${album_name}`;
-                    const yt_query = youtube_queries.track(artist, track, album_name);
+                    // const yt_query = youtube_queries.track(artist, track, album_name);
+                    const yt_query = `${artist} topic ${track}`;
                     const results = await youtube.search(yt_query);
                     let first_result = results.videos[0];
                     output.insertPlainText(`[Youtube] Found video for ${track}:\n[Youtube] URL: ${first_result.link}\n`);
