@@ -4,7 +4,6 @@ const { writeFile, access } = require('fs/promises');
 const {yt_dlp_binary} = require('./constants'); 
 const yt_dlp_version = require('../../assets/yt_dlp_version.json');
 const path = require('path');
-const { QCursor } = require('@nodegui/nodegui');
 
 async function getLatestYtdlpVersion(output) {
     try {
@@ -24,22 +23,6 @@ async function getLatestYtdlpVersion(output) {
         } else {
             return null;
         }
-    }
-}
-
-/**
- * Checks the binaries folder for yt-dlp
- * @returns {boolean} boolean
- */
-async function checkYtdlpBinary(output) {
-    try {
-        await access(`./binaries/${yt_dlp_binary}`);
-        output.insertPlainText('[setup]: Has yt-dlp\n');
-        return true;
-    } catch (err) {
-        console.error(err);
-        output.insertPlainText('[setup]: Needs yt-dlp\n');
-        return false;
     }
 }
 

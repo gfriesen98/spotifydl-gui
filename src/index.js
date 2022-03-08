@@ -4,7 +4,7 @@ const { mkdirSync, createWriteStream } = require('fs');
 const path = require('path');
 const { default: axios } = require('axios');
 
-const {yt_dlp_binary, youtube_queries} = require('./utility/constants');
+const { yt_dlp_binary } = require('./utility/constants');
 const rootStyleSheet = require('./styles/rootStyleSheet');
 const spotify_prefixes = ['https://open.spotify.com/track', 'https://play.spotify.com/track', 'https://open.spotify.com/playlist', 'https://open.spotify.com/album'];
 const { checkYtdlpVersion, yt_dlp } = require('./utility/ytdlp');
@@ -29,7 +29,6 @@ const { youtube } = require('scrape-youtube');
 const { getData, getTracks } = require('spotify-url-info');
 
 let file_type = 'mp3';
-let canDownload = false;
 
 /**
  * Checks for ffmpeg and yt-dlp on startup
@@ -262,27 +261,28 @@ async function main() {
             if (input.startsWith(spotify_prefixes[0]) || input.startsWith(spotify_prefixes[1])) {
                 output.insertPlainText("[Spotify] Gathering info from Spotify...\n");
                 const youtube_result = await singleTrackUrl(input, output);
-                const dir = `${download_dir}/${youtube_result.artist}/${youtube_result.album_name}`;
-                await yt_dlp.downloadTrack(youtube_result.first_result.link, dir, `${youtube_result.track_number} - ${youtube_result.track}.%(ext)s`, output, { file_type });
+                const url = youtube_result.first_result.link;
+                const download_path = `${download_dir}/${youtube_result.artist}/${youtube_result.album_name}`;
+                const filename_template = `${youtube_result.track_number} - ${youtube_result.track}.%(ext)s`;
+                await yt_dlp.downloadTrack(url, download_path, filename_template, output, { file_type, album_name: youtube_result.album_name });
 
             } else if (input.startsWith(spotify_prefixes[3])) {
                 output.insertPlainText("[Spotify] Gathering info from Spotify...\n");
                 const data = await getData(input);
                 const album_name = data.name;
                 const artist = data.artists[0].name;
-                const dir = `${download_dir}/${artist}/${album_name}`;
+                const download_path = `${download_dir}/${artist}/${album_name}`;
                 for await (const n of data.tracks.items) {
                     const track = n.name;
-                    // const yt_query = youtube_queries.track(artist, track, album_name);
                     // Tracks can sometimes be the same as the album name which nets us different results
                     const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
                     const results = await youtube.search(yt_query);
                     let first_result = results.videos[0];
                     output.insertPlainText(`[Youtube] Found video for ${track}:\n`);
                     output.insertPlainText(`[Youtube] URL: ${first_result.link}\n`);
-                    await yt_dlp.downloadTrack(first_result.link, dir, `${n.track_number} - ${track}.${file_type}`, output, { file_type, album_name });
+                    await yt_dlp.downloadTrack(first_result.link, download_path, `${n.track_number} - ${track}.${file_type}`, output, { file_type, album_name });
                 }
-                output.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(dir)}\n`);
+                output.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(download_path)}\n`);
 
             } else if (input.startsWith(spotify_prefixes[2])) {
                 output.insertPlainText("[Spotify] Playlists are limited to 100 tracks\n");
@@ -295,11 +295,11 @@ async function main() {
                     const track = n.name;
                     const dir = `${download_dir}/${artist}/${album_name}`;
                     // const yt_query = youtube_queries.track(artist, track, album_name);
-                    const yt_query = `${artist} topic ${track}`;
+                    const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
                     const results = await youtube.search(yt_query);
                     let first_result = results.videos[0];
                     output.insertPlainText(`[Youtube] Found video for ${track}:\n[Youtube] URL: ${first_result.link}\n`);
-                    await yt_dlp.downloadTrack(first_result.link, dir, `${n.track_number} - ${track}.%(ext)s`, output, { file_type, album_name });
+                    await yt_dlp.downloadTrack(first_result.link, dir, `${n.track_number} - ${track}.${file_type}`, output, { file_type, album_name });
                     temp = dir;
                 }
                 output.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(temp)}\n`);

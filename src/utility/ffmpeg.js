@@ -25,7 +25,7 @@ async function downloadLinux(output) {
         console.log(output);
         output.insertPlainText(`[tar -xf]: ${output.trim()}`);
     });
-    linux_extract.stderr.on('data', data => console.warn("TAR -XF ERROR: ", data));
+    linux_extract.stderr.on('data', data => console.warn("TAR ERROR: ", data));
     linux_extract.on('error', err => console.error(err));
     linux_extract.on('close', code => console.log(`tar -xf ./binaries/ffmpeg.tar.gz exited with code ${code}`));
 
