@@ -27,13 +27,8 @@ async function getLatestYtdlpVersion(output) {
 }
 
 module.exports = {
-
-    /**
-     * 
-     * @param { QPlainTextEdit } output Output widget
-     */
+    
     checkYtdlpVersion: async function (output) {
-        // let has_ytdlp = await checkYtdlpBinary(output);
         let has_ytdlp = false;
 
         try {
@@ -69,7 +64,7 @@ module.exports = {
         return { has_ytdlp, latest_ytdlp_version };
     },
 
-    yt_dlp:{
+    YtDlp:{
 
         /**
          * Spawns a yt-dlp process to download and convert a youtube video to mp3
@@ -104,7 +99,6 @@ module.exports = {
                     "--output", `${filename_template.replace('/', ' ').replace(/  +/g, ' ')}`,
                     url
                 ];
-                console.log(yt_dlp_options);
                 const yt_dlp = spawn("./binaries/" + yt_dlp_binary, yt_dlp_options);
         
                 yt_dlp.stdout.on('data', data => {

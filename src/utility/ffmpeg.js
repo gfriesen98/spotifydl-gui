@@ -5,7 +5,7 @@ const extract = require('extract-zip');
 const path = require('path');
 
 async function downloadMacos(output) {
-    for (const download of ffmpeg_urls.macos) {
+    for await (const download of ffmpeg_urls.macos) {
         const res = await axios.get(download.url, { responseType: 'arraybuffer' });
         await writeFile(path.resolve('./binaries/' + download.name), res.data, { encoding: 'binary' });
 

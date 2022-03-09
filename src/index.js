@@ -1,329 +1,294 @@
 require('dotenv').config()
-const { access } = require('fs/promises');
-const { mkdirSync, createWriteStream } = require('fs');
 const path = require('path');
-const { default: axios } = require('axios');
-
-const { yt_dlp_binary } = require('./utility/constants');
 const rootStyleSheet = require('./styles/rootStyleSheet');
-const spotify_prefixes = ['https://open.spotify.com/track', 'https://play.spotify.com/track', 'https://open.spotify.com/playlist', 'https://open.spotify.com/album'];
-const { checkYtdlpVersion, yt_dlp } = require('./utility/ytdlp');
-const { checkFfmpegExists, downloadWin32, downloadLinux, downloadMacos } = require('./utility/ffmpeg');
-const { singleTrackUrl } = require('./utility/spotify');
-
-const {
-    FlexLayout,
-    QLabel,
-    QLineEdit,
-    QPlainTextEdit,
-    QMainWindow,
-    QPushButton,
-    QWidget,
-    QScrollBar,
-    QComboBox,
-    QCheckBox,
-    QFileDialog,
-    FileMode,
-} = require('@nodegui/nodegui');
 const { youtube } = require('scrape-youtube');
+const { singleTrackUrl } = require('./utility/spotify');
 const { getData, getTracks } = require('spotify-url-info');
+const query = require('./utility/query');
+const checkDependencies = require('./utility/checkDependencies');
+const {
+    FlexLayout, QLabel,
+    QLineEdit, QPlainTextEdit,
+    QMainWindow, QPushButton,
+    QWidget, QScrollBar,
+    QComboBox, QCheckBox,
+    QFileDialog, FileMode,
+} = require('@nodegui/nodegui');
 
-let file_type = 'mp3';
+const YtDlp = require('./utility/ytdlp').YtDlp;
+const SPOTIFY_PREFIXES = ['https://open.spotify.com/track', 'https://play.spotify.com/track', 'https://open.spotify.com/playlist', 'https://open.spotify.com/album'];
+
+const Window = new QMainWindow();
+const RootView = new QWidget();
+const RootViewLayout = new FlexLayout();
+const Fieldset = new QWidget();
+const FieldsetLayout = new FlexLayout();
+const Fieldset2 = new QWidget();
+const FieldsetLayout2 = new FlexLayout();
+const UrlLayout = new QWidget();
+const UrlRowLayout = new FlexLayout();
+const UrlLabel = new QLabel();
+const UrlInput = new QLineEdit();
+const DownloadDirLayout = new QWidget();
+const DownloadDirRowLayout = new FlexLayout();
+const DownloadDirLabel = new QLabel();
+const DownloadDirInput = new QLineEdit();
+const OptionsLayout = new QWidget();
+const OptionsRowLayout = new FlexLayout();
+const OptionsLabel = new QLabel();
+const FiletypeCombobox = new QComboBox();
+const CheckboxLayout = new QWidget();
+const CheckboxRowLayout = new FlexLayout();
+const IsYTCheck = new QCheckBox();
+const OutputTextBox = new QPlainTextEdit();
+const TextboxScrollBar = new QScrollBar();      // Define a new scrollbar to set autoscrolling
+const ButtonRow = new QWidget();
+const ButtonRowLayout = new FlexLayout();
+const DownloadButton = new QPushButton();
+const DirectoryButton = new QPushButton();
+const FileDialogBox = new QFileDialog();
 
 /**
- * Checks for ffmpeg and yt-dlp on startup
- * @param {QPlainTextEdit} output Output box
- * @returns {boolean}
+ * Setup main application window
  */
-async function check_deps(output, button) {
-    output.insertPlainText('[setup]: Wait for "Ready!" before using!\n\n');
-    output.insertPlainText('[setup]: Checking for dependencies...\n');
-
-    // check for binaries folder
-    try {
-        await access('./binaries');
-    } catch (err) {
-        console.log('binaries path does not exist');
-        try {
-            mkdirSync('./binaries');
-        } catch (err) {
-            console.error(err);
-            output.insertPlainText('\n[ERROR]: Could not create binaries folder: ' + err.message + "\n");
-        }
-    }
-
-    // Get yt-dlp latest version and check if we need to download an update
-    const { has_ytdlp, latest_ytdlp_version } = await checkYtdlpVersion(output);
-
-    // Check if we need to download yt-dlp
-    if (!has_ytdlp) {
-        try {
-            output.insertPlainText('[setup]: Downloading yt-dlp...\n');
-            const url = `https://github.com/yt-dlp/yt-dlp/releases/download/${latest_ytdlp_version}/${yt_dlp_binary}`;
-            const res = await axios.get(url, { responseType: 'stream' });
-            const dest = createWriteStream('./binaries/' + yt_dlp_binary); // ,{ mode: 0o755 }
-            await res.data.pipe(dest);
-        } catch (err) {
-            console.log(err);
-            output.insertPlainText('[ERROR]: There was an issue dealing with yt-dlp:\n' + err.message + '\n\n...Will try to continue\n\n');
-        }
-        output.insertPlainText('[setup]: Finished downloading yt-dlp\n');
-    }
-
-    // check if ffmpeg exists
-    const has_ffmpeg = await checkFfmpegExists(output);
-
-    if (!has_ffmpeg) {
-        try {
-            output.insertPlainText('[setup]: Downloading ffmpeg...\n');
-
-            if (process.platform === 'win32') {
-                await downloadWin32(output);
-            } else if (process.platform === 'linux') {
-                await downloadLinux(output)
-            } else if (process.platform === 'darwin') {
-                await downloadMacos(output);
-            }
-
-        } catch (err) {
-            console.log(err);
-            output.insertPlainText('[ERROR]: There was an issue dealing with ffmpg:\n' + err.message + "\n\nWill try to continue\n\n");
-            errors.ffmpeg_download = true;
-        }
-    }
-    output.insertPlainText('Ready!');
-    button.setEnabled(true);
-}
-
 async function main() {
-    const win = new QMainWindow();
-    win.setWindowTitle('spotifydl-gui');
-    win.setFixedSize(800, 600);
+    Window.setWindowTitle('spotifydl-gui');
+    Window.setFixedSize(800, 600);
 
     // Root view
-    const rootView = new QWidget();
-    const rootViewLayout = new FlexLayout();
-    rootView.setObjectName('rootView');
-    rootView.setLayout(rootViewLayout);
+    RootView.setObjectName('rootView');
+    RootView.setLayout(RootViewLayout);
 
     // Fieldset
-    const fieldset = new QWidget();
-    const fieldsetLayout = new FlexLayout();
-    fieldset.setObjectName('fieldset');
-    fieldset.setLayout(fieldsetLayout);
+    Fieldset.setObjectName('fieldset');
+    Fieldset.setLayout(FieldsetLayout);
 
     // Fieldset 2
-    const fieldset2 = new QWidget();
-    const fieldsetLayout2 = new FlexLayout();
-    fieldset2.setObjectName('fieldset2');
-    fieldset2.setLayout(fieldsetLayout2);
+    Fieldset2.setObjectName('fieldset2');
+    Fieldset2.setLayout(FieldsetLayout2);
 
     // URL row
-    const urlLayout = new QWidget();
-    const urlRowLayout = new FlexLayout();
-    const urlLabel = new QLabel();
-    const urlInput = new QLineEdit();
-    urlLayout.setObjectName('numCharsRow');
-    urlLayout.setLayout(urlRowLayout);
+    UrlLayout.setObjectName('numCharsRow');
+    UrlLayout.setLayout(UrlRowLayout);
 
-    urlLabel.setText('url: ');
-    urlRowLayout.addWidget(urlLabel);
+    UrlLabel.setText('url: ');
+    UrlRowLayout.addWidget(UrlLabel);
 
-    urlInput.setObjectName('numCharsInput');
-    urlRowLayout.addWidget(urlInput);
+    UrlInput.setObjectName('numCharsInput');
+    UrlRowLayout.addWidget(UrlInput);
 
     // Download dir row
-    const downloadDirLayout = new QWidget();
-    const downloadDirRowLayout = new FlexLayout();
-    const downloadDirLabel = new QLabel();
-    const downloadDirInput = new QLineEdit();
-    downloadDirLayout.setObjectName('downloadDirLayout');
-    downloadDirLayout.setLayout(downloadDirRowLayout);
+    DownloadDirLayout.setObjectName('downloadDirLayout');
+    DownloadDirLayout.setLayout(DownloadDirRowLayout);
 
-    downloadDirLabel.setText('download location: ');
-    downloadDirRowLayout.addWidget(downloadDirLabel);
+    DownloadDirLabel.setText('download location: ');
+    DownloadDirRowLayout.addWidget(DownloadDirLabel);
 
-    downloadDirInput.setObjectName('downloadDirInput');
-    downloadDirInput.setReadOnly(true);
-    downloadDirRowLayout.addWidget(downloadDirInput);
+    DownloadDirInput.setObjectName('downloadDirInput');
+    DownloadDirInput.setReadOnly(true);
+    DownloadDirRowLayout.addWidget(DownloadDirInput);
 
     // Options row
-    const optionsLayout = new QWidget();
-    const optionsRowLayout = new FlexLayout();
-    const optionsLabel = new QLabel();
-    const filetypeCombobox = new QComboBox();
-    optionsLabel.setObjectName('optionsLabel')
-    optionsLayout.setObjectName('optionsLayout');
-    optionsLayout.setLayout(optionsRowLayout);
-    optionsLabel.setText('options: ');
-    optionsRowLayout.addWidget(optionsLabel);
-    
-    filetypeCombobox.setObjectName('filetypeCombobox')
-    filetypeCombobox.addItem(undefined, '-- filetype (default mp3) --');
-    filetypeCombobox.addItem(undefined, 'mp3');
-    filetypeCombobox.addItem(undefined, '"flac"');
-    optionsRowLayout.addWidget(filetypeCombobox);
+    OptionsLabel.setObjectName('optionsLabel')
+    OptionsLayout.setObjectName('optionsLayout');
+    OptionsLayout.setLayout(OptionsRowLayout);
+    OptionsLabel.setText('options: ');
+    OptionsRowLayout.addWidget(OptionsLabel);
 
-    const checkboxLayout = new QWidget();
-    const checkboxRowLayout = new FlexLayout();
-    const isYTCheck = new QCheckBox();
-    isYTCheck.setObjectName('isytcheck');
-    isYTCheck.setText('Youtube URL?');
-    checkboxLayout.setLayout(checkboxRowLayout);
-    checkboxRowLayout.addWidget(isYTCheck);
+    FiletypeCombobox.setObjectName('filetypeCombobox')
+    FiletypeCombobox.addItem(undefined, '-- filetype (default mp3) --');
+    FiletypeCombobox.addItem(undefined, 'mp3');
+    FiletypeCombobox.addItem(undefined, '"flac"');
+    OptionsRowLayout.addWidget(FiletypeCombobox);
+
+    IsYTCheck.setObjectName('isytcheck');
+    IsYTCheck.setText('Youtube URL?');
+    CheckboxLayout.setLayout(CheckboxRowLayout);
+    CheckboxRowLayout.addWidget(IsYTCheck);
 
 
     // Output box
-    const output = new QPlainTextEdit();
-    const scrollbar = new QScrollBar();      // Define a new scrollbar to set autoscrolling
-    output.setObjectName('output');
-    output.setReadOnly(true);
-    output.setWordWrapMode(0);
+    OutputTextBox.setObjectName('output');
+    OutputTextBox.setReadOnly(true);
+    OutputTextBox.setWordWrapMode(0);
 
-    scrollbar.setMaximum(scrollbar.value()); // not sure if needed tbh
-    output.setVerticalScrollBar(scrollbar);  // apply new scrollbar to output box
-    output.setVerticalScrollBarPolicy(0);    // policy 2: Always show scrollbar, 1: Show scrollbar when needed, 0: Hide scrollbar
+    TextboxScrollBar.setMaximum(TextboxScrollBar.value()); // not sure if needed tbh
+    OutputTextBox.setVerticalScrollBar(TextboxScrollBar);  // apply new scrollbar to output box
+    OutputTextBox.setVerticalScrollBarPolicy(0);    // policy 2: Always show scrollbar, 1: Show scrollbar when needed, 0: Hide scrollbar
 
 
     // Button row
-    const buttonRow = new QWidget();
-    const buttonRowLayout = new FlexLayout();
-    buttonRow.setLayout(buttonRowLayout);
-    buttonRow.setObjectName('buttonRow');
+    ButtonRow.setLayout(ButtonRowLayout);
+    ButtonRow.setObjectName('buttonRow');
 
     // Buttons
-    const downloadButton = new QPushButton();
-    downloadButton.setText('Download');
-    downloadButton.setEnabled(false);
-    downloadButton.setObjectName('downloadButton');
+    DownloadButton.setText('Download');
+    DownloadButton.setEnabled(false);
+    DownloadButton.setObjectName('downloadButton');
 
-    const directoryButton = new QPushButton();
-    directoryButton.setText('select download location');
-    directoryButton.setObjectName('directoryButton');
+    DirectoryButton.setText('select download location');
+    DirectoryButton.setObjectName('directoryButton');
 
     // File dialog
-    const fileDialog = new QFileDialog();
-    fileDialog.setFileMode(FileMode.Directory);
+    FileDialogBox.setFileMode(FileMode.Directory);
 
     // Add the widgets to the respective layouts
     // fieldset
-    fieldsetLayout.addWidget(urlLayout);
-    fieldsetLayout.addWidget(directoryButton);
-    fieldsetLayout.addWidget(downloadDirLayout);
+    FieldsetLayout.addWidget(UrlLayout);
+    FieldsetLayout.addWidget(DirectoryButton);
+    FieldsetLayout.addWidget(DownloadDirLayout);
 
     // fieldset2
-    fieldsetLayout2.addWidget(optionsLayout);
+    FieldsetLayout2.addWidget(OptionsLayout);
     // fieldsetLayout2.addWidget(checkboxLayout);
 
     // buttonrow view
-    buttonRowLayout.addWidget(downloadButton);
+    ButtonRowLayout.addWidget(DownloadButton);
 
     // rootview
-    rootViewLayout.addWidget(fieldset);
-    rootViewLayout.addWidget(fieldset2);
-    rootViewLayout.addWidget(output);
-    rootViewLayout.addWidget(buttonRow);
+    RootViewLayout.addWidget(Fieldset);
+    RootViewLayout.addWidget(Fieldset2);
+    RootViewLayout.addWidget(OutputTextBox);
+    RootViewLayout.addWidget(ButtonRow);
 
-    // Event handling
-
-    // scroll ouput terminal automatically
-    output.addEventListener('textChanged', () => {
-        scrollbar.setSliderPosition(scrollbar.maximum()); // set scroll position to the maximum (down)
-    });
-
-    /**
-     * @todo i really gotta learn how to make use of the ui lol
-     * change file extension
-     */
-    filetypeCombobox.addEventListener('currentIndexChanged', d => {
-        if (d === 0) file_type = 'mp3';
-        if (d === 1) file_type = 'mp3';
-        if (d === 2) file_type = 'flac';
-    });
-
-    // show file picker dialog
-    directoryButton.addEventListener('clicked', async () => {
-        fileDialog.exec();
-        const selectedDir = fileDialog.selectedFiles()[0];
-        console.log(selectedDir);
-        downloadDirInput.setText(selectedDir);
-    });
- 
-    // run download on button click
-    downloadButton.addEventListener('clicked', async () => {
-        let input = urlInput.text();
-        let download_dir = downloadDirInput.text() === '' ? './downloads' : downloadDirInput.text();
-        
-        output.setPlainText('');
-        try {
-            if (typeof (input) === 'undefined' || input === null) throw new Error('Please provide an input!');
-            
-            if (input.startsWith(spotify_prefixes[0]) || input.startsWith(spotify_prefixes[1])) {
-                output.insertPlainText("[Spotify] Gathering info from Spotify...\n");
-                const youtube_result = await singleTrackUrl(input, output);
-                const url = youtube_result.first_result.link;
-                const download_path = `${download_dir}/${youtube_result.artist}/${youtube_result.album_name}`;
-                const filename_template = `${youtube_result.track_number} - ${youtube_result.track}.%(ext)s`;
-                await yt_dlp.downloadTrack(url, download_path, filename_template, output, { file_type, album_name: youtube_result.album_name });
-
-            } else if (input.startsWith(spotify_prefixes[3])) {
-                output.insertPlainText("[Spotify] Gathering info from Spotify...\n");
-                const data = await getData(input);
-                const album_name = data.name;
-                const artist = data.artists[0].name;
-                const download_path = `${download_dir}/${artist}/${album_name}`;
-                for await (const n of data.tracks.items) {
-                    const track = n.name;
-                    // Tracks can sometimes be the same as the album name which nets us different results
-                    const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
-                    const results = await youtube.search(yt_query);
-                    let first_result = results.videos[0];
-                    output.insertPlainText(`[Youtube] Found video for ${track}:\n`);
-                    output.insertPlainText(`[Youtube] URL: ${first_result.link}\n`);
-                    await yt_dlp.downloadTrack(first_result.link, download_path, `${n.track_number} - ${track}.${file_type}`, output, { file_type, album_name });
-                }
-                output.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(download_path)}\n`);
-
-            } else if (input.startsWith(spotify_prefixes[2])) {
-                output.insertPlainText("[Spotify] Playlists are limited to 100 tracks\n");
-                output.insertPlainText("[Spotify] Gathering info from Spotify...\n");
-                const data = await getTracks(input);
-                let temp = "";
-                for await (const n of data) {
-                    const artist = n.artists[0].name;
-                    const album_name = n.album.name;
-                    const track = n.name;
-                    const dir = `${download_dir}/${artist}/${album_name}`;
-                    // const yt_query = youtube_queries.track(artist, track, album_name);
-                    const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
-                    const results = await youtube.search(yt_query);
-                    let first_result = results.videos[0];
-                    output.insertPlainText(`[Youtube] Found video for ${track}:\n[Youtube] URL: ${first_result.link}\n`);
-                    await yt_dlp.downloadTrack(first_result.link, dir, `${n.track_number} - ${track}.${file_type}`, output, { file_type, album_name });
-                    temp = dir;
-                }
-                output.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(temp)}\n`);
-
-            } // youtube stuff here
-             else {
-                throw new Error('Invalid URL provided');
-            }
-        } catch (err) {
-            console.error(err);
-            console.log(err.message);
-            output.insertPlainText("\n" + err.message + "\n");
-        }
-    });
+    /* Event handling */
+    OutputTextBox.addEventListener('textChanged', outputOnTextChange);
+    FiletypeCombobox.addEventListener('currentIndexChanged', getFiletype);
+    DirectoryButton.addEventListener('clicked', directoryButtonOnClick);
+    DownloadButton.addEventListener('clicked', downloadOnClick);
 
     // Apply styling
-    rootView.setStyleSheet(rootStyleSheet);
+    RootView.setStyleSheet(rootStyleSheet);
 
-    win.setCentralWidget(rootView);
-    win.show();
+    Window.setCentralWidget(RootView);
+    Window.show();
 
     // check for dependencies
-    check_deps(output, downloadButton);
-    global.win = win;
+    checkDependencies(OutputTextBox, DownloadButton);
+    global.win = Window;
+}
+
+/**
+ * Returns the selected filetype index string
+ * @returns {string} flac|mp3
+ */
+function getFiletype() {
+    switch (FiletypeCombobox.currentIndex()) {
+        case 2: return 'flac';
+        case 1:
+        default: return 'mp3'
+    }
+}
+
+/**
+ * Move textbox scrollbar down on text change
+ */
+function outputOnTextChange() {
+    TextboxScrollBar.setSliderPosition(TextboxScrollBar.maximum()); // set scroll position to the maximum (down)
+}
+
+/**
+ * Execute filepicker dialog
+ */
+function directoryButtonOnClick() {
+    FileDialogBox.exec();
+    const selectedDir = FileDialogBox.selectedFiles()[0];
+    console.log(selectedDir);
+    DownloadDirInput.setText(selectedDir);
+}
+
+async function downloadOnClick() {
+    let input = UrlInput.text();
+    let download_dir = DownloadDirInput.text() === '' ? './downloads' : DownloadDirInput.text();
+
+    OutputTextBox.setPlainText('');
+    try {
+        if (typeof (input) === 'undefined' || input === null) throw new Error('Please provide an input!');
+
+        OutputTextBox.insertPlainText("[Spotify] Gathering info from Spotify...\n");
+
+        // playlists handled seperately for now
+        if (input.startsWith('https://open.spotify.com/playlist')) {
+            OutputTextBox.insertPlainText("[Spotify] Playlists are limited to 100 tracks\n");
+            const data = await getTracks(input);
+            let temp = "";
+            for await (const n of data) {
+                const artist = n.artists[0].name;
+                const album_name = n.album.name;
+                const track = n.name;
+                const dir = `${download_dir}/${artist}/${album_name}`;
+                const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
+                const results = await youtube.search(yt_query);
+                let first_result = results.videos[0];
+                OutputTextBox.insertPlainText(`[Youtube] Found video for ${track}:\n`);
+                    OutputTextBox.insertPlainText(`[Youtube] URL: ${first_result.link}\n[Youtube] Video: ${first_result.title} uploaded by ${first_result.channel.name}\n`);
+                await YtDlp.downloadTrack(first_result.link, dir, `${n.track_number} - ${track}.${getFiletype()}`, OutputTextBox, { file_type: getFiletype(), album_name });
+                temp = dir;
+            }
+            OutputTextBox.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(temp)}\n`);
+        } else {
+            const spotifyData = await getData(input);
+            if (spotifyData.type === 'album') {
+                for await (const [i, n] of spotifyData.tracks.items.entries()) {
+                    const queryData = query(spotifyData, i);
+                    const download_path = `${download_dir}/${queryData.artist}/${queryData.album}`;
+                    const filename_template = `${queryData.track_number} - ${queryData.track}.%(ext)s`;
+                    const results = await youtube.search(queryData.query);
+                    let first_result = results.videos[0];
+                    OutputTextBox.insertPlainText(`[Youtube] Found video for ${queryData.track}:\n`);
+                    OutputTextBox.insertPlainText(`[Youtube] URL: ${first_result.link}\n[Youtube] Video: ${first_result.title} uploaded by ${first_result.channel.name}\n`);
+                    await YtDlp.downloadTrack(first_result.link, download_path, filename_template, OutputTextBox, { file_type: getFiletype(), album_name: queryData.album });
+                }
+
+            } else {
+                const queryData = query(spotifyData);
+                const download_path = `${download_dir}/${queryData.artist}/${queryData.album}`;
+                const filename_template = `${queryData.track_number} - ${queryData.track}.%(ext)s`;
+                const results = await youtube.search(queryData.query);
+                let first_result = results.videos[0];
+                OutputTextBox.insertPlainText(`[Youtube] Found video for ${queryData.track}:\n`);
+                OutputTextBox.insertPlainText(`[Youtube] URL: ${first_result.link}\n[Youtube] Video: ${first_result.title} uploaded by ${first_result.channel.name}\n`);
+                await YtDlp.downloadTrack(first_result.link, download_path, filename_template, OutputTextBox, { file_type: getFiletype(), album_name: queryData.album });
+            }
+        }
+
+
+        // if (input.startsWith(SPOTIFY_PREFIXES[0]) || input.startsWith(SPOTIFY_PREFIXES[1])) {
+        //     const youtube_result = await singleTrackUrl(input, OutputTextBox);
+        //     const url = youtube_result.first_result.link;
+        //     const download_path = `${download_dir}/${youtube_result.artist}/${youtube_result.album_name}`;
+        //     const filename_template = `${youtube_result.track_number} - ${youtube_result.track}.%(ext)s`;
+        //     await YtDlp.downloadTrack(url, download_path, filename_template, OutputTextBox, { file_type: getFiletype(), album_name: youtube_result.album_name });
+
+        // } else if (input.startsWith(SPOTIFY_PREFIXES[3])) {
+        //     const data = await getData(input);
+        //     const album_name = data.name;
+        //     const artist = data.artists[0].name;
+        //     const download_path = `${download_dir}/${artist}/${album_name}`;
+        //     for await (const n of data.tracks.items) {
+        //         const track = n.name;
+        //         // Tracks can sometimes be the same as the album name which nets us different results
+        //         const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
+        //         const results = await youtube.search(yt_query);
+        //         let first_result = results.videos[0];
+        //         OutputTextBox.insertPlainText(`[Youtube] Found video for ${track}:\n`);
+        //         OutputTextBox.insertPlainText(`[Youtube] URL: ${first_result.link}\n`);
+        //         await YtDlp.downloadTrack(first_result.link, download_path, `${n.track_number} - ${track}.${getFiletype()}`, OutputTextBox, { file_type: getFiletype(), album_name });
+        //     }
+        //     OutputTextBox.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(download_path)}\n`);
+
+        // } else if (input.startsWith(SPOTIFY_PREFIXES[2])) {
+
+
+        // } // youtube stuff here
+        // else {
+        //     throw new Error('Invalid URL provided');
+        // }
+    } catch (err) {
+        console.error(err);
+        console.log(err.message);
+        OutputTextBox.insertPlainText("\n" + err.message + "\n");
+    }
 }
 
 main().catch(console.error);
