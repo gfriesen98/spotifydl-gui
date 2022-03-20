@@ -79,7 +79,8 @@ module.exports = {
             return new Promise(function(resolve, reject) {
                 const yt_dlp_options = [
                     // ignore errors
-                    "-v", "--ignore-errors",
+                    // "-v", "--ignore-errors",
+                    "--ignore-errors",
 
                     // set download dir
                     "-P", download_dir,

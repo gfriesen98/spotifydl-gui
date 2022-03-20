@@ -17,7 +17,8 @@
     "extract-zip": "^2.0.1",
     "scrape-youtube": "^2.1.14",
     "spotify-url-info": "^2.2.5",
-    "supports-color": "^9.2.1"
+    "supports-color": "^9.2.1",
+    "ytdl-core": "^4.11.0"
   },
   "devDependencies": {
     "@nodegui/packer": "^1.5.0",

@@ -14,12 +14,12 @@ module.exports = function query(spotifyData, index = 0, template = '') {
     if (template == '') {
         let defaultQuery = '';
         if (spotifyData.type === 'track') {
-            defaultQuery = `${spotifyData.artists[0].name} topic ${spotifyData.name}`
-            return { query: defaultQuery, artist: spotifyData.artists[0].name, album: 'Singles', track: spotifyData.name, track_number: data.track_number };
+            defaultQuery = `${spotifyData.artists[0].name} - topic ${spotifyData.name}`
+            return { query: defaultQuery, artist: spotifyData.artists[0].name, album: 'Singles', track: spotifyData.name, track_number: spotifyData.track_number };
         } else {
             defaultQuery = spotifyData.tracks.items[index].name === spotifyData.name
-                ? `${spotifyData.artists[0].name} topic ${spotifyData.tracks.items[index].name}`
-                : `${spotifyData.artists[0].name} topic ${spotifyData.name} ${spotifyData.tracks.items[index].name}`;
+                ? `${spotifyData.artists[0].name} - topic ${spotifyData.tracks.items[index].name}`
+                : `${spotifyData.artists[0].name} - topic ${spotifyData.name} ${spotifyData.tracks.items[index].name}`;
 
             return { query: defaultQuery, artist: spotifyData.artists[0].name, album: spotifyData.name, track: spotifyData.tracks.items[index].name, track_number: spotifyData.tracks.items[index].track_number };
         }

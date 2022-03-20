@@ -3,6 +3,7 @@ const path = require('path');
 const rootStyleSheet = require('./styles/rootStyleSheet');
 const { youtube } = require('scrape-youtube');
 const { singleTrackUrl } = require('./utility/spotify');
+const { ytdl } = require('ytdl-core');
 const { getData, getTracks } = require('spotify-url-info');
 const query = require('./utility/query');
 const checkDependencies = require('./utility/checkDependencies');
@@ -217,11 +218,41 @@ async function downloadOnClick() {
                 const album_name = n.album.name;
                 const track = n.name;
                 const dir = `${download_dir}/${artist}/${album_name}`;
-                const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
+
+                // const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
+                const yt_query = `${artist} - topic ${track}`;
+
                 const results = await youtube.search(yt_query);
                 let first_result = results.videos[0];
+
+                /**
+                * @todo GENERALZE THIS TO A FUNCTION
+                * 
+                * I think (?) queries should be kept simple (Artist - topic Track)
+                * 
+                * Tracks and artists should also be stripped of non-ascii characters,
+                * it seems that non-ascii charcters affect the output of youtube-scrape
+                * compared to a manual youtube search
+                */
+                if (!results.videos[0].title.includes(track)) {
+                    console.log('FIRST RESULT !== QUERY');
+                    for (let i = 0; i < results.videos.length; i++) {
+                        console.log('checking loop: ' + results.videos[i].title + '\t' + results.videos[i].link);
+                        if (results.videos[i].channel.name.toLowerCase().includes(artist.toLowerCase())) {
+                            console.log('channel name is OK, checking title');
+                            if (results.videos[i].title.toLowerCase().includes(track.toLowerCase())) {
+                                console.log('FOUND', results.videos[i]);
+                                first_result = results.videos[i];
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    console.log('First result is accurate enough');
+                }
+
                 OutputTextBox.insertPlainText(`[Youtube] Found video for ${track}:\n`);
-                    OutputTextBox.insertPlainText(`[Youtube] URL: ${first_result.link}\n[Youtube] Video: ${first_result.title} uploaded by ${first_result.channel.name}\n`);
+                OutputTextBox.insertPlainText(`[Youtube] URL: ${first_result.link}\n[Youtube] Video: ${first_result.title} uploaded by ${first_result.channel.name}\n`);
                 await YtDlp.downloadTrack(first_result.link, dir, `${n.track_number} - ${track}.${getFiletype()}`, OutputTextBox, { file_type: getFiletype(), album_name });
                 temp = dir;
             }
@@ -233,8 +264,40 @@ async function downloadOnClick() {
                     const queryData = query(spotifyData, i);
                     const download_path = `${download_dir}/${queryData.artist}/${queryData.album}`;
                     const filename_template = `${queryData.track_number} - ${queryData.track}.%(ext)s`;
-                    const results = await youtube.search(queryData.query);
+
+                    // const results = await youtube.search(queryData.query); still playing with the query
+                    const results = await youtube.search(`${queryData.artist.replace(/[^\x00-\x7F]/g, '')} - topic ${queryData.track}`);
                     let first_result = results.videos[0];
+
+                    /**
+                     * @todo GENERALZE THIS TO A FUNCTION
+                     * 
+                     * I think (?) queries should be kept simple (Artist - topic Track)
+                     * 
+                     * Tracks and artists should also be stripped of non-ascii characters,
+                     * it seems that non-ascii charcters affect the output of youtube-scrape
+                     * compared to a manual youtube search
+                     */
+                    if (!results.videos[0].title.includes(queryData.track)) {
+                        console.log('FIRST RESULT !== QUERY');
+                        for (let i = 0; i < results.videos.length; i++) {
+                            console.log('checking loop: ' + results.videos[i].title + '\t' + results.videos[i].link);
+                            if (results.videos[i].channel.name.toLowerCase().includes(queryData.artist.toLowerCase())) {
+                                console.log('channel name is OK, checking video title');
+                                if (results.videos[i].title.toLowerCase().includes(queryData.track.toLowerCase())) {
+                                    console.log('FOUND', results.videos[i]);
+                                    first_result = results.videos[i];
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        console.log('First result is accurate enough');
+                    }
+
+                    console.log('SPOTIFY TITLE ' + n.title);
+                    console.log('FIRST RESULT ======>', JSON.stringify(first_result));
+
                     OutputTextBox.insertPlainText(`[Youtube] Found video for ${queryData.track}:\n`);
                     OutputTextBox.insertPlainText(`[Youtube] URL: ${first_result.link}\n[Youtube] Video: ${first_result.title} uploaded by ${first_result.channel.name}\n`);
                     await YtDlp.downloadTrack(first_result.link, download_path, filename_template, OutputTextBox, { file_type: getFiletype(), album_name: queryData.album });
@@ -251,39 +314,6 @@ async function downloadOnClick() {
                 await YtDlp.downloadTrack(first_result.link, download_path, filename_template, OutputTextBox, { file_type: getFiletype(), album_name: queryData.album });
             }
         }
-
-
-        // if (input.startsWith(SPOTIFY_PREFIXES[0]) || input.startsWith(SPOTIFY_PREFIXES[1])) {
-        //     const youtube_result = await singleTrackUrl(input, OutputTextBox);
-        //     const url = youtube_result.first_result.link;
-        //     const download_path = `${download_dir}/${youtube_result.artist}/${youtube_result.album_name}`;
-        //     const filename_template = `${youtube_result.track_number} - ${youtube_result.track}.%(ext)s`;
-        //     await YtDlp.downloadTrack(url, download_path, filename_template, OutputTextBox, { file_type: getFiletype(), album_name: youtube_result.album_name });
-
-        // } else if (input.startsWith(SPOTIFY_PREFIXES[3])) {
-        //     const data = await getData(input);
-        //     const album_name = data.name;
-        //     const artist = data.artists[0].name;
-        //     const download_path = `${download_dir}/${artist}/${album_name}`;
-        //     for await (const n of data.tracks.items) {
-        //         const track = n.name;
-        //         // Tracks can sometimes be the same as the album name which nets us different results
-        //         const yt_query = track === album_name ? `${artist} topic ${album_name} ${track}` : `${artist} topic ${track}`;
-        //         const results = await youtube.search(yt_query);
-        //         let first_result = results.videos[0];
-        //         OutputTextBox.insertPlainText(`[Youtube] Found video for ${track}:\n`);
-        //         OutputTextBox.insertPlainText(`[Youtube] URL: ${first_result.link}\n`);
-        //         await YtDlp.downloadTrack(first_result.link, download_path, `${n.track_number} - ${track}.${getFiletype()}`, OutputTextBox, { file_type: getFiletype(), album_name });
-        //     }
-        //     OutputTextBox.insertPlainText(`\nFinished! Downloads can be found in ${path.resolve(download_path)}\n`);
-
-        // } else if (input.startsWith(SPOTIFY_PREFIXES[2])) {
-
-
-        // } // youtube stuff here
-        // else {
-        //     throw new Error('Invalid URL provided');
-        // }
     } catch (err) {
         console.error(err);
         console.log(err.message);
