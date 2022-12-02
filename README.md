@@ -1,5 +1,9 @@
 # spotifydl-gui
 
+
+shit broky .. spotify-url-info died
+
+
 gui for yt-dlp that parses metadata from spotify urls
 
 its early in development and will probably break
